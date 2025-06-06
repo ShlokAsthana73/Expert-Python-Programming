@@ -1,0 +1,65 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import yfinance as yf
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM
+
+# Load data
+def load_data(ticker='AAPL', start='2025-01-01', end='2025-12-31'):
+    df = yf.download(ticker, start=start, end=end)
+    return df[['Close']]
+
+# Prepare data
+def preprocess_data(df, sequence_length=60):
+    scaler = MinMaxScaler()
+    data = scaler.fit_transform(df)
+    
+    X, y = [], []
+    for i in range(sequence_length, len(data)):
+        X.append(data[i-sequence_length:i, 0])
+        y.append(data[i, 0])
+    
+    X, y = np.array(X), np.array(y)
+    X = np.reshape(X, (X.shape[0], X.shape[1], 1))
+    return X, y, scaler
+
+# Build LSTM model
+def build_model(input_shape):
+    model = Sequential()
+    model.add(LSTM(50, return_sequences=True, input_shape=input_shape))
+    model.add(LSTM(50))
+    model.add(Dense(1))
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    return model
+
+# Plot predictions
+def plot_predictions(real, predicted):
+    plt.figure(figsize=(10,6))
+    plt.plot(real, color='blue', label='Actual Price')
+    plt.plot(predicted, color='red', label='Predicted Price')
+    plt.title('Stock Price Prediction')
+    plt.xlabel('Time')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.show()
+
+if __name__ == "__main__":
+    df = load_data('AAPL')
+    training_data_len = int(len(df) * 0.8)
+    
+    train_df = df[:training_data_len]
+    test_df = df[training_data_len - 60:]
+
+    X_train, y_train, scaler = preprocess_data(train_df)
+    X_test, y_test, _ = preprocess_data(test_df)
+
+    model = build_model((X_train.shape[1], 1))
+    model.fit(X_train, y_train, epochs=10, batch_size=32)
+
+    predictions = model.predict(X_test)
+    predictions = scaler.inverse_transform(predictions.reshape(-1, 1))
+    y_test_scaled = scaler.inverse_transform(y_test.reshape(-1, 1))
+
+    plot_predictions(y_test_scaled, predictions)
