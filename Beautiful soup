@@ -1,0 +1,39 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+# URL of the webpage you want to scrape
+url = "https://example.com"
+
+# Send an HTTP request to the URL
+response = requests.get(url)
+
+# Check if the request was successful (status code 200)
+if response.status_code == 200:
+    # Parse the HTML content using BeautifulSoup
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Example: Extract all the paragraph tags
+    paragraphs = soup.find_all('p')
+
+    # Print the extracted paragraphs
+    for paragraph in paragraphs:
+        print(paragraph.text)
+
+    # Example: Extract data from a table
+    table = soup.find('table')
+    if table:
+        table_rows = table.find_all('tr')
+        data = []
+        for row in table_rows:
+            cells = row.find_all('td')
+            row_data = [cell.text.strip() for cell in cells]
+            data.append(row_data)
+
+        # Convert the data to a Pandas DataFrame
+        df = pd.DataFrame(data)
+        print(df)
+    else:
+        print("No table found on the page.")
+else:
+    print(f"Failed to retrieve the webpage. Status code: {response.status_code}")
