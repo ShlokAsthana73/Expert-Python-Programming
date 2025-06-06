@@ -1,0 +1,63 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+def scrape_website(url):
+    """
+    Scrapes a website and extracts data using Beautiful Soup.
+
+    Args:
+        url (str): The URL of the website to scrape.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing the scraped data, or None if an error occurs.
+    """
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        # Example: Extract all links from the page
+        links = []
+        for link in soup.find_all('a', href=True):
+            links.append(link['href'])
+
+        # Example: Extract all paragraph text
+        paragraphs = [p.text for p in soup.find_all('p')]
+
+        # Example: Extract text from a specific div
+        specific_div = soup.find('div', class_='your-div-class')
+        if specific_div:
+            div_text = specific_div.text
+        else:
+            div_text = "Div not found"
+
+        # Create a dictionary to store the extracted data
+        data = {
+            'links': links,
+            'paragraphs': paragraphs,
+            'div_text': div_text
+        }
+
+        # Create a DataFrame from the dictionary
+        df = pd.DataFrame(data)
+        return df
+    except requests.exceptions.RequestException as e:
+        print(f"Error during request: {e}")
+        return None
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+if __name__ == "__main__":
+    target_url = "https://example.com"  # Replace with the URL you want to scrape
+    scraped_data = scrape_website(target_url)
+
+    if scraped_data is not None:
+        print("Scraped data:")
+        print(scraped_data)
+        # Example: Save the DataFrame to a CSV file
+        scraped_data.to_csv('scraped_data.csv', index=False)
+        print("Data saved to 'scraped_data.csv'")
+    else:
+        print("Scraping failed.")
